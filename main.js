@@ -14,13 +14,22 @@ let mortgageBreakdownChart = null;
 let mortgageAmortizationChart = null;
 let loanBreakdownChart = null;
 let loanAmortizationChart = null;
+let retirementSuccessChart = null;
+let retirementSuccessDistChart = null;
+let compensationBreakdownChart = null;
+let compensationComparisonChart = null;
+let stressTestChart = null;
+let stressTestDrawdownChart = null;
 
 // Calculation results state
 const calculationResults = {
   investment: null,
   retirement: null,
   mortgage: null,
-  loan: null
+  loan: null,
+  retirementSuccess: null,
+  compensation: null,
+  stressTest: null
 };
 
 // Form input values state
@@ -50,6 +59,37 @@ const formInputs = {
     loanPrincipal: 10000,
     loanRate: 6.5,
     loanMonths: 60
+  },
+  retirementSuccess: {
+    currentAge: 35,
+    retirementAge: 65,
+    lifeExpectancy: 90,
+    currentPortfolio: 500000,
+    annualContribution: 20000,
+    retirementSpending: 60000,
+    expectedReturn: 7,
+    volatility: 15,
+    inflationRate: 2.5,
+    simulations: 1000
+  },
+  compensation: {
+    baseSalary: 100000,
+    targetBonus: 20,
+    stockOptions: 50000,
+    vestingYears: 4,
+    expectedStockGrowth: 10,
+    taxBracket: 32,
+    stateTax: 5,
+    retirementContrib: 10,
+    signingBonus: 0
+  },
+  stressTest: {
+    portfolioValue: 500000,
+    stockAllocation: 60,
+    bondAllocation: 30,
+    cashAllocation: 10,
+    investmentHorizon: 10,
+    stressScenario: 'moderate'
   }
 };
 
@@ -74,6 +114,21 @@ const calculatorSettings = {
     theme: 'light',
     logo: 'credit',
     colorPalette: 'emerald'
+  },
+  retirementSuccess: {
+    theme: 'light',
+    logo: 'chart',
+    colorPalette: 'purple'
+  },
+  compensation: {
+    theme: 'light',
+    logo: 'diamond',
+    colorPalette: 'amber'
+  },
+  stressTest: {
+    theme: 'light',
+    logo: 'trending',
+    colorPalette: 'rose'
   }
 };
 
@@ -105,7 +160,8 @@ const logos = {
   piggy: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>',
   trending: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>',
   diamond: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>',
-  star: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>'
+  star: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>',
+  credit: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>'
 };
 
 // Helper functions
@@ -132,6 +188,34 @@ function saveFormInputs(calculator) {
     formInputs.loan.loanPrincipal = parseFloat(document.getElementById('loanPrincipal')?.value || formInputs.loan.loanPrincipal);
     formInputs.loan.loanRate = parseFloat(document.getElementById('loanRate')?.value || formInputs.loan.loanRate);
     formInputs.loan.loanMonths = parseFloat(document.getElementById('loanMonths')?.value || formInputs.loan.loanMonths);
+  } else if (calculator === 'retirementSuccess') {
+    formInputs.retirementSuccess.currentAge = parseFloat(document.getElementById('rsCurrentAge')?.value || formInputs.retirementSuccess.currentAge);
+    formInputs.retirementSuccess.retirementAge = parseFloat(document.getElementById('rsRetirementAge')?.value || formInputs.retirementSuccess.retirementAge);
+    formInputs.retirementSuccess.lifeExpectancy = parseFloat(document.getElementById('rsLifeExpectancy')?.value || formInputs.retirementSuccess.lifeExpectancy);
+    formInputs.retirementSuccess.currentPortfolio = parseFloat(document.getElementById('rsCurrentPortfolio')?.value || formInputs.retirementSuccess.currentPortfolio);
+    formInputs.retirementSuccess.annualContribution = parseFloat(document.getElementById('rsAnnualContribution')?.value || formInputs.retirementSuccess.annualContribution);
+    formInputs.retirementSuccess.retirementSpending = parseFloat(document.getElementById('rsRetirementSpending')?.value || formInputs.retirementSuccess.retirementSpending);
+    formInputs.retirementSuccess.expectedReturn = parseFloat(document.getElementById('rsExpectedReturn')?.value || formInputs.retirementSuccess.expectedReturn);
+    formInputs.retirementSuccess.volatility = parseFloat(document.getElementById('rsVolatility')?.value || formInputs.retirementSuccess.volatility);
+    formInputs.retirementSuccess.inflationRate = parseFloat(document.getElementById('rsInflationRate')?.value || formInputs.retirementSuccess.inflationRate);
+    formInputs.retirementSuccess.simulations = parseFloat(document.getElementById('rsSimulations')?.value || formInputs.retirementSuccess.simulations);
+  } else if (calculator === 'compensation') {
+    formInputs.compensation.baseSalary = parseFloat(document.getElementById('compBaseSalary')?.value || formInputs.compensation.baseSalary);
+    formInputs.compensation.targetBonus = parseFloat(document.getElementById('compTargetBonus')?.value || formInputs.compensation.targetBonus);
+    formInputs.compensation.stockOptions = parseFloat(document.getElementById('compStockOptions')?.value || formInputs.compensation.stockOptions);
+    formInputs.compensation.vestingYears = parseFloat(document.getElementById('compVestingYears')?.value || formInputs.compensation.vestingYears);
+    formInputs.compensation.expectedStockGrowth = parseFloat(document.getElementById('compStockGrowth')?.value || formInputs.compensation.expectedStockGrowth);
+    formInputs.compensation.taxBracket = parseFloat(document.getElementById('compTaxBracket')?.value || formInputs.compensation.taxBracket);
+    formInputs.compensation.stateTax = parseFloat(document.getElementById('compStateTax')?.value || formInputs.compensation.stateTax);
+    formInputs.compensation.retirementContrib = parseFloat(document.getElementById('compRetirementContrib')?.value || formInputs.compensation.retirementContrib);
+    formInputs.compensation.signingBonus = parseFloat(document.getElementById('compSigningBonus')?.value || formInputs.compensation.signingBonus);
+  } else if (calculator === 'stressTest') {
+    formInputs.stressTest.portfolioValue = parseFloat(document.getElementById('stPortfolioValue')?.value || formInputs.stressTest.portfolioValue);
+    formInputs.stressTest.stockAllocation = parseFloat(document.getElementById('stStockAllocation')?.value || formInputs.stressTest.stockAllocation);
+    formInputs.stressTest.bondAllocation = parseFloat(document.getElementById('stBondAllocation')?.value || formInputs.stressTest.bondAllocation);
+    formInputs.stressTest.cashAllocation = parseFloat(document.getElementById('stCashAllocation')?.value || formInputs.stressTest.cashAllocation);
+    formInputs.stressTest.investmentHorizon = parseFloat(document.getElementById('stInvestmentHorizon')?.value || formInputs.stressTest.investmentHorizon);
+    formInputs.stressTest.stressScenario = document.getElementById('stStressScenario')?.value || formInputs.stressTest.stressScenario;
   }
 }
 
@@ -158,6 +242,34 @@ function restoreFormInputs(calculator) {
     document.getElementById('loanPrincipal').value = formInputs.loan.loanPrincipal;
     document.getElementById('loanRate').value = formInputs.loan.loanRate;
     document.getElementById('loanMonths').value = formInputs.loan.loanMonths;
+  } else if (calculator === 'retirementSuccess') {
+    document.getElementById('rsCurrentAge').value = formInputs.retirementSuccess.currentAge;
+    document.getElementById('rsRetirementAge').value = formInputs.retirementSuccess.retirementAge;
+    document.getElementById('rsLifeExpectancy').value = formInputs.retirementSuccess.lifeExpectancy;
+    document.getElementById('rsCurrentPortfolio').value = formInputs.retirementSuccess.currentPortfolio;
+    document.getElementById('rsAnnualContribution').value = formInputs.retirementSuccess.annualContribution;
+    document.getElementById('rsRetirementSpending').value = formInputs.retirementSuccess.retirementSpending;
+    document.getElementById('rsExpectedReturn').value = formInputs.retirementSuccess.expectedReturn;
+    document.getElementById('rsVolatility').value = formInputs.retirementSuccess.volatility;
+    document.getElementById('rsInflationRate').value = formInputs.retirementSuccess.inflationRate;
+    document.getElementById('rsSimulations').value = formInputs.retirementSuccess.simulations;
+  } else if (calculator === 'compensation') {
+    document.getElementById('compBaseSalary').value = formInputs.compensation.baseSalary;
+    document.getElementById('compTargetBonus').value = formInputs.compensation.targetBonus;
+    document.getElementById('compStockOptions').value = formInputs.compensation.stockOptions;
+    document.getElementById('compVestingYears').value = formInputs.compensation.vestingYears;
+    document.getElementById('compStockGrowth').value = formInputs.compensation.expectedStockGrowth;
+    document.getElementById('compTaxBracket').value = formInputs.compensation.taxBracket;
+    document.getElementById('compStateTax').value = formInputs.compensation.stateTax;
+    document.getElementById('compRetirementContrib').value = formInputs.compensation.retirementContrib;
+    document.getElementById('compSigningBonus').value = formInputs.compensation.signingBonus;
+  } else if (calculator === 'stressTest') {
+    document.getElementById('stPortfolioValue').value = formInputs.stressTest.portfolioValue;
+    document.getElementById('stStockAllocation').value = formInputs.stressTest.stockAllocation;
+    document.getElementById('stBondAllocation').value = formInputs.stressTest.bondAllocation;
+    document.getElementById('stCashAllocation').value = formInputs.stressTest.cashAllocation;
+    document.getElementById('stInvestmentHorizon').value = formInputs.stressTest.investmentHorizon;
+    document.getElementById('stStressScenario').value = formInputs.stressTest.stressScenario;
   }
 }
 
@@ -172,6 +284,12 @@ function toggleTheme(calculator) {
     renderMortgageCalculator();
   } else if (calculator === 'loan') {
     renderLoanCalculator();
+  } else if (calculator === 'retirementSuccess') {
+    renderRetirementSuccessCalculator();
+  } else if (calculator === 'compensation') {
+    renderCompensationCalculator();
+  } else if (calculator === 'stressTest') {
+    renderStressTestCalculator();
   }
 }
 
@@ -186,6 +304,12 @@ function changeColorPalette(calculator, palette) {
     renderMortgageCalculator();
   } else if (calculator === 'loan') {
     renderLoanCalculator();
+  } else if (calculator === 'retirementSuccess') {
+    renderRetirementSuccessCalculator();
+  } else if (calculator === 'compensation') {
+    renderCompensationCalculator();
+  } else if (calculator === 'stressTest') {
+    renderStressTestCalculator();
   }
 }
 
@@ -200,6 +324,12 @@ function changeLogo(calculator, logo) {
     renderMortgageCalculator();
   } else if (calculator === 'loan') {
     renderLoanCalculator();
+  } else if (calculator === 'retirementSuccess') {
+    renderRetirementSuccessCalculator();
+  } else if (calculator === 'compensation') {
+    renderCompensationCalculator();
+  } else if (calculator === 'stressTest') {
+    renderStressTestCalculator();
   }
 }
 
@@ -265,6 +395,45 @@ function renderHome() {
               <h2 class="text-2xl font-bold text-gray-900 ml-4">Retirement Savings</h2>
             </div>
             <p class="text-gray-600">Plan for retirement with pension and savings projections based on your goals.</p>
+          </div>
+
+          <!-- Retirement Success Probability Calculator Card -->
+          <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer p-6" onclick="window.showRetirementSuccessCalculator()">
+            <div class="flex items-center mb-4">
+              <div class="bg-purple-100 rounded-lg p-3">
+                <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+              </div>
+              <h2 class="text-2xl font-bold text-gray-900 ml-4">Retirement Success</h2>
+            </div>
+            <p class="text-gray-600">Monte Carlo simulation to calculate the probability of your retirement plan succeeding.</p>
+          </div>
+
+          <!-- Compensation/Bonus Optimization Calculator Card -->
+          <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer p-6" onclick="window.showCompensationCalculator()">
+            <div class="flex items-center mb-4">
+              <div class="bg-amber-100 rounded-lg p-3">
+                <svg class="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                </svg>
+              </div>
+              <h2 class="text-2xl font-bold text-gray-900 ml-4">Compensation Optimizer</h2>
+            </div>
+            <p class="text-gray-600">Analyze and optimize your total compensation package including salary, bonus, and equity.</p>
+          </div>
+
+          <!-- Portfolio Stress-Test Simulator Card -->
+          <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer p-6" onclick="window.showStressTestCalculator()">
+            <div class="flex items-center mb-4">
+              <div class="bg-red-100 rounded-lg p-3">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                </svg>
+              </div>
+              <h2 class="text-2xl font-bold text-gray-900 ml-4">Portfolio Stress Test</h2>
+            </div>
+            <p class="text-gray-600">Simulate how your portfolio would perform under various market stress scenarios.</p>
           </div>
         </div>
       </div>
@@ -1743,12 +1912,1382 @@ function renderRetirementCalculator() {
   }
 }
 
+// Retirement Success Probability Calculator (Monte Carlo Simulation)
+function renderRetirementSuccessCalculator() {
+  const settings = calculatorSettings.retirementSuccess;
+  const theme = settings.theme;
+  const palette = colorPalettes[settings.colorPalette][theme];
+  const logoPath = logos[settings.logo];
+
+  const bgClass = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50';
+  const cardBg = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
+  const textPrimary = theme === 'dark' ? 'text-white' : 'text-gray-900';
+  const textSecondary = theme === 'dark' ? 'text-gray-300' : 'text-gray-600';
+  const borderColor = theme === 'dark' ? 'border-gray-700' : 'border-gray-200';
+  const inputBg = theme === 'dark' ? 'bg-gray-700 text-white border border-gray-600' : 'bg-white text-gray-900 border border-gray-300';
+
+  currentView = 'retirementSuccess';
+  app.innerHTML = `
+    <div class="min-h-screen py-8 px-4 ${bgClass}">
+      <div class="max-w-7xl mx-auto">
+        <div class="mb-6 flex justify-between items-center">
+          <button onclick="window.goHome()" class="flex items-center text-blue-600 hover:text-blue-800 transition-colors">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            <span class="${textPrimary}">Back</span>
+          </button>
+
+          <div class="flex gap-3">
+            <button onclick="window.toggleTheme('retirementSuccess')" class="${cardBg} p-2 rounded-lg ${borderColor} border transition-all hover:scale-105" title="Toggle Theme">
+              <svg class="w-5 h-5 ${textPrimary}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${theme === 'light' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>'}
+              </svg>
+            </button>
+
+            <div class="relative">
+              <button onclick="document.getElementById('rsCustomDropdown').classList.toggle('hidden')" class="${cardBg} px-4 py-2 rounded-lg ${borderColor} border ${textPrimary} hover:scale-105 transition-all">
+                Customize
+              </button>
+              <div id="rsCustomDropdown" class="hidden absolute right-0 mt-2 w-64 ${cardBg} rounded-lg shadow-xl ${borderColor} border p-4 z-10">
+                <h3 class="${textPrimary} font-semibold mb-3">Color Palette</h3>
+                <div class="grid grid-cols-5 gap-2 mb-4">
+                  ${Object.keys(colorPalettes).map(p => `
+                    <button onclick="window.changeColorPalette('retirementSuccess', '${p}')" class="w-10 h-10 rounded-lg border-2 ${p === settings.colorPalette ? 'border-blue-500' : 'border-transparent'}" style="background: ${colorPalettes[p][theme].primary}" title="${p}"></button>
+                  `).join('')}
+                </div>
+                <h3 class="${textPrimary} font-semibold mb-3">Logo</h3>
+                <div class="grid grid-cols-5 gap-2">
+                  ${Object.keys(logos).map(l => `
+                    <button onclick="window.changeLogo('retirementSuccess', '${l}')" class="w-10 h-10 rounded-lg ${l === settings.logo ? 'bg-blue-100' : cardBg} ${borderColor} border hover:bg-blue-50 transition-colors">
+                      <svg class="w-6 h-6 mx-auto ${textPrimary}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        ${logos[l]}
+                      </svg>
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="${cardBg} rounded-lg shadow-lg p-6 ${borderColor} border">
+            <div class="flex items-center mb-6">
+              <div class="p-3 rounded-lg" style="background: ${palette.secondary}">
+                <svg class="w-8 h-8" style="color: ${palette.primary}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  ${logoPath}
+                </svg>
+              </div>
+              <h1 class="text-2xl font-bold ${textPrimary} ml-4">Retirement Success Probability</h1>
+            </div>
+
+            <form id="retirementSuccessForm" class="space-y-4">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium ${textSecondary} mb-2">Current Age</label>
+                  <input type="number" id="rsCurrentAge" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="35">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium ${textSecondary} mb-2">Retirement Age</label>
+                  <input type="number" id="rsRetirementAge" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="65">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Life Expectancy</label>
+                <input type="number" id="rsLifeExpectancy" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="90">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Current Portfolio Value</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-3 ${textSecondary}">$</span>
+                  <input type="number" id="rsCurrentPortfolio" class="w-full pl-8 pr-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="500000">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Annual Contribution (Until Retirement)</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-3 ${textSecondary}">$</span>
+                  <input type="number" id="rsAnnualContribution" class="w-full pl-8 pr-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="20000">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Annual Retirement Spending</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-3 ${textSecondary}">$</span>
+                  <input type="number" id="rsRetirementSpending" class="w-full pl-8 pr-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="60000">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium ${textSecondary} mb-2">Expected Return (%)</label>
+                  <input type="number" id="rsExpectedReturn" step="0.1" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="7">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium ${textSecondary} mb-2">Volatility (%)</label>
+                  <input type="number" id="rsVolatility" step="0.1" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="15">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium ${textSecondary} mb-2">Inflation Rate (%)</label>
+                  <input type="number" id="rsInflationRate" step="0.1" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="2.5">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium ${textSecondary} mb-2">Simulations</label>
+                  <input type="number" id="rsSimulations" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="1000">
+                </div>
+              </div>
+
+              <button type="submit" class="w-full py-3 rounded-lg transition-all font-medium text-white hover:opacity-90" style="background: ${palette.primary}">
+                Run Monte Carlo Simulation
+              </button>
+            </form>
+          </div>
+
+          <div id="rsResults" class="hidden ${cardBg} rounded-lg shadow-lg p-6 ${borderColor} border">
+            <h2 class="text-xl font-bold ${textPrimary} mb-6">Simulation Results</h2>
+
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              <div class="p-4 rounded-lg" style="background: ${palette.secondary}">
+                <p class="text-sm ${textSecondary} mb-1">Success Rate</p>
+                <p class="text-3xl font-bold" style="color: ${palette.primary}" id="rsSuccessRate">0%</p>
+              </div>
+              <div class="p-4 rounded-lg ${borderColor} border">
+                <p class="text-sm ${textSecondary} mb-1">Median Final Balance</p>
+                <p class="text-xl font-bold ${textPrimary}" id="rsMedianBalance">$0</p>
+              </div>
+            </div>
+
+            <div id="rsStatusDiv" class="p-4 rounded-lg mb-6">
+              <p class="text-sm font-medium" id="rsStatusMessage"></p>
+            </div>
+
+            <div class="mb-6 p-4 rounded-lg ${borderColor} border">
+              <h3 class="font-semibold ${textPrimary} mb-3">Percentile Outcomes at End of Plan</h3>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">10th Percentile (Poor):</span>
+                  <span class="${textPrimary} font-medium" id="rsP10">$0</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">25th Percentile:</span>
+                  <span class="${textPrimary} font-medium" id="rsP25">$0</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">50th Percentile (Median):</span>
+                  <span class="${textPrimary} font-medium" id="rsP50">$0</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">75th Percentile:</span>
+                  <span class="${textPrimary} font-medium" id="rsP75">$0</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">90th Percentile (Great):</span>
+                  <span class="${textPrimary} font-medium" id="rsP90">$0</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-6">
+              <h3 class="font-semibold ${textPrimary} mb-3">Portfolio Projection Bands</h3>
+              <canvas id="retirementSuccessChart"></canvas>
+            </div>
+
+            <div>
+              <h3 class="font-semibold ${textPrimary} mb-3">Final Balance Distribution</h3>
+              <canvas id="retirementSuccessDistChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('retirementSuccessForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    calculateRetirementSuccess();
+  });
+
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('rsCustomDropdown');
+    if (dropdown && !e.target.closest('.relative') && !dropdown.classList.contains('hidden')) {
+      dropdown.classList.add('hidden');
+    }
+  });
+
+  restoreFormInputs('retirementSuccess');
+
+  if (calculationResults.retirementSuccess) {
+    displayRetirementSuccessResults();
+  } else {
+    setTimeout(() => calculateRetirementSuccess(), 0);
+  }
+}
+
+function calculateRetirementSuccess() {
+  saveFormInputs('retirementSuccess');
+
+  const currentAge = parseFloat(document.getElementById('rsCurrentAge').value);
+  const retirementAge = parseFloat(document.getElementById('rsRetirementAge').value);
+  const lifeExpectancy = parseFloat(document.getElementById('rsLifeExpectancy').value);
+  const currentPortfolio = parseFloat(document.getElementById('rsCurrentPortfolio').value);
+  const annualContribution = parseFloat(document.getElementById('rsAnnualContribution').value);
+  const retirementSpending = parseFloat(document.getElementById('rsRetirementSpending').value);
+  const expectedReturn = parseFloat(document.getElementById('rsExpectedReturn').value) / 100;
+  const volatility = parseFloat(document.getElementById('rsVolatility').value) / 100;
+  const inflationRate = parseFloat(document.getElementById('rsInflationRate').value) / 100;
+  const numSimulations = parseInt(document.getElementById('rsSimulations').value);
+
+  const yearsToRetirement = retirementAge - currentAge;
+  const yearsInRetirement = lifeExpectancy - retirementAge;
+  const totalYears = lifeExpectancy - currentAge;
+
+  const finalBalances = [];
+  const allPaths = [];
+
+  // Monte Carlo simulation
+  for (let sim = 0; sim < numSimulations; sim++) {
+    let balance = currentPortfolio;
+    let spending = retirementSpending;
+    const path = [balance];
+
+    for (let year = 1; year <= totalYears; year++) {
+      // Generate random return using Box-Muller transform
+      const u1 = Math.random();
+      const u2 = Math.random();
+      const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      const yearReturn = expectedReturn + volatility * z;
+
+      if (year <= yearsToRetirement) {
+        // Accumulation phase
+        balance = balance * (1 + yearReturn) + annualContribution;
+      } else {
+        // Withdrawal phase - adjust spending for inflation
+        spending = retirementSpending * Math.pow(1 + inflationRate, year - yearsToRetirement);
+        balance = balance * (1 + yearReturn) - spending;
+      }
+
+      balance = Math.max(0, balance);
+      path.push(balance);
+    }
+
+    finalBalances.push(balance);
+    allPaths.push(path);
+  }
+
+  // Calculate statistics
+  finalBalances.sort((a, b) => a - b);
+  const successCount = finalBalances.filter(b => b > 0).length;
+  const successRate = (successCount / numSimulations) * 100;
+
+  const p10 = finalBalances[Math.floor(numSimulations * 0.1)];
+  const p25 = finalBalances[Math.floor(numSimulations * 0.25)];
+  const p50 = finalBalances[Math.floor(numSimulations * 0.5)];
+  const p75 = finalBalances[Math.floor(numSimulations * 0.75)];
+  const p90 = finalBalances[Math.floor(numSimulations * 0.9)];
+
+  // Calculate percentile paths for chart
+  const labels = [];
+  for (let year = 0; year <= totalYears; year++) {
+    labels.push(`Age ${currentAge + year}`);
+  }
+
+  const p10Path = [];
+  const p25Path = [];
+  const p50Path = [];
+  const p75Path = [];
+  const p90Path = [];
+
+  for (let year = 0; year <= totalYears; year++) {
+    const yearBalances = allPaths.map(path => path[year]).sort((a, b) => a - b);
+    p10Path.push(yearBalances[Math.floor(numSimulations * 0.1)]);
+    p25Path.push(yearBalances[Math.floor(numSimulations * 0.25)]);
+    p50Path.push(yearBalances[Math.floor(numSimulations * 0.5)]);
+    p75Path.push(yearBalances[Math.floor(numSimulations * 0.75)]);
+    p90Path.push(yearBalances[Math.floor(numSimulations * 0.9)]);
+  }
+
+  // Create distribution histogram data
+  const histogramBins = 20;
+  const maxBalance = Math.max(...finalBalances);
+  const minBalance = Math.min(...finalBalances);
+  const binSize = (maxBalance - minBalance) / histogramBins;
+  const histogram = new Array(histogramBins).fill(0);
+  const histogramLabels = [];
+
+  for (let i = 0; i < histogramBins; i++) {
+    const binStart = minBalance + i * binSize;
+    histogramLabels.push('$' + (binStart / 1000).toFixed(0) + 'K');
+  }
+
+  finalBalances.forEach(balance => {
+    const binIndex = Math.min(Math.floor((balance - minBalance) / binSize), histogramBins - 1);
+    histogram[binIndex]++;
+  });
+
+  calculationResults.retirementSuccess = {
+    successRate,
+    p10, p25, p50, p75, p90,
+    labels,
+    p10Path, p25Path, p50Path, p75Path, p90Path,
+    histogram,
+    histogramLabels,
+    retirementAge,
+    currentAge
+  };
+
+  displayRetirementSuccessResults();
+}
+
+function displayRetirementSuccessResults() {
+  if (!calculationResults.retirementSuccess) return;
+
+  const { successRate, p10, p25, p50, p75, p90, labels, p10Path, p25Path, p50Path, p75Path, p90Path, histogram, histogramLabels, retirementAge, currentAge } = calculationResults.retirementSuccess;
+
+  const formatMoney = (val) => '$' + val.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  document.getElementById('rsSuccessRate').textContent = successRate.toFixed(1) + '%';
+  document.getElementById('rsMedianBalance').textContent = formatMoney(p50);
+  document.getElementById('rsP10').textContent = formatMoney(p10);
+  document.getElementById('rsP25').textContent = formatMoney(p25);
+  document.getElementById('rsP50').textContent = formatMoney(p50);
+  document.getElementById('rsP75').textContent = formatMoney(p75);
+  document.getElementById('rsP90').textContent = formatMoney(p90);
+
+  const statusDiv = document.getElementById('rsStatusDiv');
+  const statusMessage = document.getElementById('rsStatusMessage');
+
+  if (successRate >= 90) {
+    statusDiv.className = 'p-4 rounded-lg bg-green-100 border border-green-300';
+    statusMessage.className = 'text-sm font-medium text-green-800';
+    statusMessage.textContent = 'Excellent! Your retirement plan has a very high probability of success.';
+  } else if (successRate >= 75) {
+    statusDiv.className = 'p-4 rounded-lg bg-blue-100 border border-blue-300';
+    statusMessage.className = 'text-sm font-medium text-blue-800';
+    statusMessage.textContent = 'Good. Your plan has a reasonable chance of success, but consider increasing savings or reducing spending.';
+  } else if (successRate >= 50) {
+    statusDiv.className = 'p-4 rounded-lg bg-yellow-100 border border-yellow-300';
+    statusMessage.className = 'text-sm font-medium text-yellow-800';
+    statusMessage.textContent = 'Caution. Your plan has significant risk of failure. Consider adjusting your assumptions.';
+  } else {
+    statusDiv.className = 'p-4 rounded-lg bg-red-100 border border-red-300';
+    statusMessage.className = 'text-sm font-medium text-red-800';
+    statusMessage.textContent = 'Warning! Your retirement plan has a high probability of running out of money. Major adjustments needed.';
+  }
+
+  document.getElementById('rsResults').classList.remove('hidden');
+
+  const settings = calculatorSettings.retirementSuccess;
+  const theme = settings.theme;
+  const palette = colorPalettes[settings.colorPalette][theme];
+
+  if (retirementSuccessChart) retirementSuccessChart.destroy();
+  if (retirementSuccessDistChart) retirementSuccessDistChart.destroy();
+
+  const retirementIndex = retirementAge - currentAge;
+
+  const ctx = document.getElementById('retirementSuccessChart').getContext('2d');
+  retirementSuccessChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: '90th Percentile',
+          data: p90Path,
+          borderColor: 'rgba(16, 185, 129, 0.8)',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          fill: '+1',
+          tension: 0.4,
+          borderWidth: 1,
+          pointRadius: 0
+        },
+        {
+          label: '75th Percentile',
+          data: p75Path,
+          borderColor: 'rgba(59, 130, 246, 0.8)',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          fill: '+1',
+          tension: 0.4,
+          borderWidth: 1,
+          pointRadius: 0
+        },
+        {
+          label: '50th Percentile (Median)',
+          data: p50Path,
+          borderColor: palette.primary,
+          backgroundColor: palette.secondary,
+          fill: false,
+          tension: 0.4,
+          borderWidth: 3,
+          pointRadius: 0
+        },
+        {
+          label: '25th Percentile',
+          data: p25Path,
+          borderColor: 'rgba(245, 158, 11, 0.8)',
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          fill: '+1',
+          tension: 0.4,
+          borderWidth: 1,
+          pointRadius: 0
+        },
+        {
+          label: '10th Percentile',
+          data: p10Path,
+          borderColor: 'rgba(239, 68, 68, 0.8)',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          fill: false,
+          tension: 0.4,
+          borderWidth: 1,
+          pointRadius: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return context.dataset.label + ': $' + context.parsed.y.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+          }
+        },
+        annotation: {
+          annotations: {
+            retirementLine: {
+              type: 'line',
+              xMin: retirementIndex,
+              xMax: retirementIndex,
+              borderColor: 'rgba(0, 0, 0, 0.3)',
+              borderWidth: 2,
+              borderDash: [5, 5],
+              label: {
+                display: true,
+                content: 'Retirement',
+                position: 'start'
+              }
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '$' + (value / 1000000).toFixed(1) + 'M';
+            }
+          }
+        }
+      }
+    }
+  });
+
+  const distCtx = document.getElementById('retirementSuccessDistChart').getContext('2d');
+  retirementSuccessDistChart = new Chart(distCtx, {
+    type: 'bar',
+    data: {
+      labels: histogramLabels,
+      datasets: [{
+        label: 'Frequency',
+        data: histogram,
+        backgroundColor: palette.primary,
+        borderColor: palette.primary,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Number of Simulations' }
+        },
+        x: {
+          title: { display: true, text: 'Final Portfolio Value' }
+        }
+      }
+    }
+  });
+}
+
+// Compensation/Bonus Optimization Calculator
+function renderCompensationCalculator() {
+  const settings = calculatorSettings.compensation;
+  const theme = settings.theme;
+  const palette = colorPalettes[settings.colorPalette][theme];
+  const logoPath = logos[settings.logo];
+
+  const bgClass = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50';
+  const cardBg = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
+  const textPrimary = theme === 'dark' ? 'text-white' : 'text-gray-900';
+  const textSecondary = theme === 'dark' ? 'text-gray-300' : 'text-gray-600';
+  const borderColor = theme === 'dark' ? 'border-gray-700' : 'border-gray-200';
+  const inputBg = theme === 'dark' ? 'bg-gray-700 text-white border border-gray-600' : 'bg-white text-gray-900 border border-gray-300';
+
+  currentView = 'compensation';
+  app.innerHTML = `
+    <div class="min-h-screen py-8 px-4 ${bgClass}">
+      <div class="max-w-7xl mx-auto">
+        <div class="mb-6 flex justify-between items-center">
+          <button onclick="window.goHome()" class="flex items-center text-blue-600 hover:text-blue-800 transition-colors">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            <span class="${textPrimary}">Back</span>
+          </button>
+
+          <div class="flex gap-3">
+            <button onclick="window.toggleTheme('compensation')" class="${cardBg} p-2 rounded-lg ${borderColor} border transition-all hover:scale-105" title="Toggle Theme">
+              <svg class="w-5 h-5 ${textPrimary}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${theme === 'light' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>'}
+              </svg>
+            </button>
+
+            <div class="relative">
+              <button onclick="document.getElementById('compCustomDropdown').classList.toggle('hidden')" class="${cardBg} px-4 py-2 rounded-lg ${borderColor} border ${textPrimary} hover:scale-105 transition-all">
+                Customize
+              </button>
+              <div id="compCustomDropdown" class="hidden absolute right-0 mt-2 w-64 ${cardBg} rounded-lg shadow-xl ${borderColor} border p-4 z-10">
+                <h3 class="${textPrimary} font-semibold mb-3">Color Palette</h3>
+                <div class="grid grid-cols-5 gap-2 mb-4">
+                  ${Object.keys(colorPalettes).map(p => `
+                    <button onclick="window.changeColorPalette('compensation', '${p}')" class="w-10 h-10 rounded-lg border-2 ${p === settings.colorPalette ? 'border-blue-500' : 'border-transparent'}" style="background: ${colorPalettes[p][theme].primary}" title="${p}"></button>
+                  `).join('')}
+                </div>
+                <h3 class="${textPrimary} font-semibold mb-3">Logo</h3>
+                <div class="grid grid-cols-5 gap-2">
+                  ${Object.keys(logos).map(l => `
+                    <button onclick="window.changeLogo('compensation', '${l}')" class="w-10 h-10 rounded-lg ${l === settings.logo ? 'bg-blue-100' : cardBg} ${borderColor} border hover:bg-blue-50 transition-colors">
+                      <svg class="w-6 h-6 mx-auto ${textPrimary}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        ${logos[l]}
+                      </svg>
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="${cardBg} rounded-lg shadow-lg p-6 ${borderColor} border">
+            <div class="flex items-center mb-6">
+              <div class="p-3 rounded-lg" style="background: ${palette.secondary}">
+                <svg class="w-8 h-8" style="color: ${palette.primary}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  ${logoPath}
+                </svg>
+              </div>
+              <h1 class="text-2xl font-bold ${textPrimary} ml-4">Compensation Optimizer</h1>
+            </div>
+
+            <form id="compensationForm" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Base Salary</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-3 ${textSecondary}">$</span>
+                  <input type="number" id="compBaseSalary" class="w-full pl-8 pr-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="100000">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium ${textSecondary} mb-2">Target Bonus (%)</label>
+                  <input type="number" id="compTargetBonus" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="20">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium ${textSecondary} mb-2">Signing Bonus</label>
+                  <div class="relative">
+                    <span class="absolute left-3 top-3 ${textSecondary}">$</span>
+                    <input type="number" id="compSigningBonus" class="w-full pl-8 pr-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="0">
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Stock Options/RSU Value</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-3 ${textSecondary}">$</span>
+                  <input type="number" id="compStockOptions" class="w-full pl-8 pr-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="50000">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium ${textSecondary} mb-2">Vesting Period (Years)</label>
+                  <input type="number" id="compVestingYears" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="4">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium ${textSecondary} mb-2">Expected Stock Growth (%)</label>
+                  <input type="number" id="compStockGrowth" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="10">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium ${textSecondary} mb-2">Federal Tax Bracket (%)</label>
+                  <input type="number" id="compTaxBracket" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="32">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium ${textSecondary} mb-2">State Tax (%)</label>
+                  <input type="number" id="compStateTax" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="5">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">401(k) Contribution (%)</label>
+                <input type="number" id="compRetirementContrib" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="10">
+              </div>
+
+              <button type="submit" class="w-full py-3 rounded-lg transition-all font-medium text-white hover:opacity-90" style="background: ${palette.primary}">
+                Analyze Compensation
+              </button>
+            </form>
+          </div>
+
+          <div id="compResults" class="hidden ${cardBg} rounded-lg shadow-lg p-6 ${borderColor} border">
+            <h2 class="text-xl font-bold ${textPrimary} mb-6">Compensation Analysis</h2>
+
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              <div class="p-4 rounded-lg" style="background: ${palette.secondary}">
+                <p class="text-sm ${textSecondary} mb-1">Total Comp (Year 1)</p>
+                <p class="text-2xl font-bold" style="color: ${palette.primary}" id="compTotalYear1">$0</p>
+              </div>
+              <div class="p-4 rounded-lg ${borderColor} border">
+                <p class="text-sm ${textSecondary} mb-1">4-Year Total</p>
+                <p class="text-xl font-bold ${textPrimary}" id="compTotal4Year">$0</p>
+              </div>
+            </div>
+
+            <div class="mb-6 p-4 rounded-lg ${borderColor} border">
+              <h3 class="font-semibold ${textPrimary} mb-3">Annual Breakdown (Year 1)</h3>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">Base Salary:</span>
+                  <span class="${textPrimary} font-medium" id="compBreakBase">$0</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">Expected Bonus:</span>
+                  <span class="${textPrimary} font-medium" id="compBreakBonus">$0</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">Signing Bonus:</span>
+                  <span class="${textPrimary} font-medium" id="compBreakSigning">$0</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">Stock Vesting (Year 1):</span>
+                  <span class="${textPrimary} font-medium" id="compBreakStock">$0</span>
+                </div>
+                <div class="flex justify-between border-t ${borderColor} pt-2 mt-2">
+                  <span class="${textPrimary} font-semibold">Gross Total:</span>
+                  <span class="${textPrimary} font-bold" id="compBreakGross">$0</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-6 p-4 rounded-lg ${borderColor} border">
+              <h3 class="font-semibold ${textPrimary} mb-3">After-Tax Analysis</h3>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">Estimated Taxes:</span>
+                  <span class="text-red-500 font-medium" id="compTaxes">-$0</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">401(k) Contribution:</span>
+                  <span class="text-blue-500 font-medium" id="comp401k">-$0</span>
+                </div>
+                <div class="flex justify-between border-t ${borderColor} pt-2 mt-2">
+                  <span class="${textPrimary} font-semibold">Take-Home Pay (Annual):</span>
+                  <span style="color: ${palette.primary}" class="font-bold" id="compTakeHome">$0</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">Monthly Take-Home:</span>
+                  <span class="${textPrimary} font-medium" id="compMonthly">$0</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-6">
+              <h3 class="font-semibold ${textPrimary} mb-3">Compensation Breakdown</h3>
+              <canvas id="compensationBreakdownChart"></canvas>
+            </div>
+
+            <div>
+              <h3 class="font-semibold ${textPrimary} mb-3">4-Year Projection</h3>
+              <canvas id="compensationComparisonChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('compensationForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    calculateCompensation();
+  });
+
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('compCustomDropdown');
+    if (dropdown && !e.target.closest('.relative') && !dropdown.classList.contains('hidden')) {
+      dropdown.classList.add('hidden');
+    }
+  });
+
+  restoreFormInputs('compensation');
+
+  if (calculationResults.compensation) {
+    displayCompensationResults();
+  } else {
+    setTimeout(() => calculateCompensation(), 0);
+  }
+}
+
+function calculateCompensation() {
+  saveFormInputs('compensation');
+
+  const baseSalary = parseFloat(document.getElementById('compBaseSalary').value);
+  const targetBonus = parseFloat(document.getElementById('compTargetBonus').value) / 100;
+  const stockOptions = parseFloat(document.getElementById('compStockOptions').value);
+  const vestingYears = parseFloat(document.getElementById('compVestingYears').value);
+  const stockGrowth = parseFloat(document.getElementById('compStockGrowth').value) / 100;
+  const taxBracket = parseFloat(document.getElementById('compTaxBracket').value) / 100;
+  const stateTax = parseFloat(document.getElementById('compStateTax').value) / 100;
+  const retirementContrib = parseFloat(document.getElementById('compRetirementContrib').value) / 100;
+  const signingBonus = parseFloat(document.getElementById('compSigningBonus').value);
+
+  const annualBonus = baseSalary * targetBonus;
+  const annualStockVest = stockOptions / vestingYears;
+
+  // Year 1 calculations
+  const year1Gross = baseSalary + annualBonus + signingBonus + annualStockVest;
+  const totalTaxRate = taxBracket + stateTax;
+  const contribution401k = Math.min(baseSalary * retirementContrib, 23000); // 2024 limit
+  const taxableIncome = year1Gross - contribution401k;
+  const taxes = taxableIncome * totalTaxRate;
+  const takeHome = year1Gross - taxes - contribution401k;
+
+  // 4-year projection
+  const yearlyData = [];
+  let total4Year = 0;
+
+  for (let year = 1; year <= 4; year++) {
+    const stockValue = annualStockVest * Math.pow(1 + stockGrowth, year - 1);
+    const yearSigning = year === 1 ? signingBonus : 0;
+    const yearGross = baseSalary + annualBonus + yearSigning + stockValue;
+    const year401k = Math.min(baseSalary * retirementContrib, 23000);
+    const yearTaxable = yearGross - year401k;
+    const yearTaxes = yearTaxable * totalTaxRate;
+    const yearTakeHome = yearGross - yearTaxes - year401k;
+
+    yearlyData.push({
+      year,
+      base: baseSalary,
+      bonus: annualBonus,
+      signing: yearSigning,
+      stock: stockValue,
+      gross: yearGross,
+      taxes: yearTaxes,
+      contribution: year401k,
+      takeHome: yearTakeHome
+    });
+
+    total4Year += yearGross;
+  }
+
+  calculationResults.compensation = {
+    baseSalary,
+    annualBonus,
+    signingBonus,
+    annualStockVest,
+    year1Gross,
+    taxes,
+    contribution401k,
+    takeHome,
+    total4Year,
+    yearlyData
+  };
+
+  displayCompensationResults();
+}
+
+function displayCompensationResults() {
+  if (!calculationResults.compensation) return;
+
+  const { baseSalary, annualBonus, signingBonus, annualStockVest, year1Gross, taxes, contribution401k, takeHome, total4Year, yearlyData } = calculationResults.compensation;
+
+  const formatMoney = (val) => '$' + val.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  document.getElementById('compTotalYear1').textContent = formatMoney(year1Gross);
+  document.getElementById('compTotal4Year').textContent = formatMoney(total4Year);
+  document.getElementById('compBreakBase').textContent = formatMoney(baseSalary);
+  document.getElementById('compBreakBonus').textContent = formatMoney(annualBonus);
+  document.getElementById('compBreakSigning').textContent = formatMoney(signingBonus);
+  document.getElementById('compBreakStock').textContent = formatMoney(annualStockVest);
+  document.getElementById('compBreakGross').textContent = formatMoney(year1Gross);
+  document.getElementById('compTaxes').textContent = '-' + formatMoney(taxes);
+  document.getElementById('comp401k').textContent = '-' + formatMoney(contribution401k);
+  document.getElementById('compTakeHome').textContent = formatMoney(takeHome);
+  document.getElementById('compMonthly').textContent = formatMoney(takeHome / 12);
+
+  document.getElementById('compResults').classList.remove('hidden');
+
+  const settings = calculatorSettings.compensation;
+  const theme = settings.theme;
+  const palette = colorPalettes[settings.colorPalette][theme];
+
+  if (compensationBreakdownChart) compensationBreakdownChart.destroy();
+  if (compensationComparisonChart) compensationComparisonChart.destroy();
+
+  const breakdownCtx = document.getElementById('compensationBreakdownChart').getContext('2d');
+  compensationBreakdownChart = new Chart(breakdownCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Base Salary', 'Bonus', 'Signing Bonus', 'Stock'],
+      datasets: [{
+        data: [baseSalary, annualBonus, signingBonus, annualStockVest],
+        backgroundColor: [
+          palette.primary,
+          'rgba(16, 185, 129, 0.8)',
+          'rgba(245, 158, 11, 0.8)',
+          'rgba(59, 130, 246, 0.8)'
+        ],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const value = context.parsed;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = ((value / total) * 100).toFixed(1);
+              return context.label + ': $' + value.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' (' + percentage + '%)';
+            }
+          }
+        }
+      }
+    }
+  });
+
+  const compCtx = document.getElementById('compensationComparisonChart').getContext('2d');
+  compensationComparisonChart = new Chart(compCtx, {
+    type: 'bar',
+    data: {
+      labels: yearlyData.map(d => 'Year ' + d.year),
+      datasets: [
+        {
+          label: 'Base Salary',
+          data: yearlyData.map(d => d.base),
+          backgroundColor: palette.primary
+        },
+        {
+          label: 'Bonus',
+          data: yearlyData.map(d => d.bonus),
+          backgroundColor: 'rgba(16, 185, 129, 0.8)'
+        },
+        {
+          label: 'Signing Bonus',
+          data: yearlyData.map(d => d.signing),
+          backgroundColor: 'rgba(245, 158, 11, 0.8)'
+        },
+        {
+          label: 'Stock',
+          data: yearlyData.map(d => d.stock),
+          backgroundColor: 'rgba(59, 130, 246, 0.8)'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom' }
+      },
+      scales: {
+        x: { stacked: true },
+        y: {
+          stacked: true,
+          ticks: {
+            callback: function(value) {
+              return '$' + (value / 1000).toFixed(0) + 'K';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// Portfolio Stress-Test Simulator
+function renderStressTestCalculator() {
+  const settings = calculatorSettings.stressTest;
+  const theme = settings.theme;
+  const palette = colorPalettes[settings.colorPalette][theme];
+  const logoPath = logos[settings.logo];
+
+  const bgClass = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50';
+  const cardBg = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
+  const textPrimary = theme === 'dark' ? 'text-white' : 'text-gray-900';
+  const textSecondary = theme === 'dark' ? 'text-gray-300' : 'text-gray-600';
+  const borderColor = theme === 'dark' ? 'border-gray-700' : 'border-gray-200';
+  const inputBg = theme === 'dark' ? 'bg-gray-700 text-white border border-gray-600' : 'bg-white text-gray-900 border border-gray-300';
+
+  currentView = 'stressTest';
+  app.innerHTML = `
+    <div class="min-h-screen py-8 px-4 ${bgClass}">
+      <div class="max-w-7xl mx-auto">
+        <div class="mb-6 flex justify-between items-center">
+          <button onclick="window.goHome()" class="flex items-center text-blue-600 hover:text-blue-800 transition-colors">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            <span class="${textPrimary}">Back</span>
+          </button>
+
+          <div class="flex gap-3">
+            <button onclick="window.toggleTheme('stressTest')" class="${cardBg} p-2 rounded-lg ${borderColor} border transition-all hover:scale-105" title="Toggle Theme">
+              <svg class="w-5 h-5 ${textPrimary}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${theme === 'light' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>'}
+              </svg>
+            </button>
+
+            <div class="relative">
+              <button onclick="document.getElementById('stCustomDropdown').classList.toggle('hidden')" class="${cardBg} px-4 py-2 rounded-lg ${borderColor} border ${textPrimary} hover:scale-105 transition-all">
+                Customize
+              </button>
+              <div id="stCustomDropdown" class="hidden absolute right-0 mt-2 w-64 ${cardBg} rounded-lg shadow-xl ${borderColor} border p-4 z-10">
+                <h3 class="${textPrimary} font-semibold mb-3">Color Palette</h3>
+                <div class="grid grid-cols-5 gap-2 mb-4">
+                  ${Object.keys(colorPalettes).map(p => `
+                    <button onclick="window.changeColorPalette('stressTest', '${p}')" class="w-10 h-10 rounded-lg border-2 ${p === settings.colorPalette ? 'border-blue-500' : 'border-transparent'}" style="background: ${colorPalettes[p][theme].primary}" title="${p}"></button>
+                  `).join('')}
+                </div>
+                <h3 class="${textPrimary} font-semibold mb-3">Logo</h3>
+                <div class="grid grid-cols-5 gap-2">
+                  ${Object.keys(logos).map(l => `
+                    <button onclick="window.changeLogo('stressTest', '${l}')" class="w-10 h-10 rounded-lg ${l === settings.logo ? 'bg-blue-100' : cardBg} ${borderColor} border hover:bg-blue-50 transition-colors">
+                      <svg class="w-6 h-6 mx-auto ${textPrimary}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        ${logos[l]}
+                      </svg>
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="${cardBg} rounded-lg shadow-lg p-6 ${borderColor} border">
+            <div class="flex items-center mb-6">
+              <div class="p-3 rounded-lg" style="background: ${palette.secondary}">
+                <svg class="w-8 h-8" style="color: ${palette.primary}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  ${logoPath}
+                </svg>
+              </div>
+              <h1 class="text-2xl font-bold ${textPrimary} ml-4">Portfolio Stress Test</h1>
+            </div>
+
+            <form id="stressTestForm" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Portfolio Value</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-3 ${textSecondary}">$</span>
+                  <input type="number" id="stPortfolioValue" class="w-full pl-8 pr-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="500000">
+                </div>
+              </div>
+
+              <div class="p-4 rounded-lg ${borderColor} border">
+                <h3 class="font-semibold ${textPrimary} mb-3">Asset Allocation (%)</h3>
+                <div class="grid grid-cols-3 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium ${textSecondary} mb-2">Stocks</label>
+                    <input type="number" id="stStockAllocation" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="60">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium ${textSecondary} mb-2">Bonds</label>
+                    <input type="number" id="stBondAllocation" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="30">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium ${textSecondary} mb-2">Cash</label>
+                    <input type="number" id="stCashAllocation" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="10">
+                  </div>
+                </div>
+                <p class="text-xs ${textSecondary} mt-2">Total must equal 100%</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Investment Horizon (Years)</label>
+                <input type="number" id="stInvestmentHorizon" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="10">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Stress Scenario</label>
+                <select id="stStressScenario" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all">
+                  <option value="mild">Mild Recession (-15% stocks, -5% bonds)</option>
+                  <option value="moderate" selected>Moderate Crisis (-30% stocks, -10% bonds)</option>
+                  <option value="severe">Severe Crash (-50% stocks, -15% bonds)</option>
+                  <option value="2008">2008 Financial Crisis (-57% stocks, +5% bonds)</option>
+                  <option value="2000">2000 Dot-Com Crash (-49% stocks, +20% bonds)</option>
+                  <option value="stagflation">Stagflation (-25% stocks, -20% bonds)</option>
+                </select>
+              </div>
+
+              <button type="submit" class="w-full py-3 rounded-lg transition-all font-medium text-white hover:opacity-90" style="background: ${palette.primary}">
+                Run Stress Test
+              </button>
+            </form>
+          </div>
+
+          <div id="stResults" class="hidden ${cardBg} rounded-lg shadow-lg p-6 ${borderColor} border">
+            <h2 class="text-xl font-bold ${textPrimary} mb-6">Stress Test Results</h2>
+
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              <div class="p-4 rounded-lg bg-red-50 border border-red-200">
+                <p class="text-sm text-red-600 mb-1">Maximum Drawdown</p>
+                <p class="text-2xl font-bold text-red-700" id="stMaxDrawdown">0%</p>
+              </div>
+              <div class="p-4 rounded-lg" style="background: ${palette.secondary}">
+                <p class="text-sm ${textSecondary} mb-1">Portfolio at Bottom</p>
+                <p class="text-xl font-bold" style="color: ${palette.primary}" id="stBottomValue">$0</p>
+              </div>
+            </div>
+
+            <div id="stStatusDiv" class="p-4 rounded-lg mb-6">
+              <p class="text-sm font-medium" id="stStatusMessage"></p>
+            </div>
+
+            <div class="mb-6 p-4 rounded-lg ${borderColor} border">
+              <h3 class="font-semibold ${textPrimary} mb-3">Scenario Impact</h3>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">Initial Portfolio:</span>
+                  <span class="${textPrimary} font-medium" id="stInitialValue">$0</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">Stock Loss:</span>
+                  <span class="text-red-500 font-medium" id="stStockLoss">-$0</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">Bond Change:</span>
+                  <span class="${textPrimary} font-medium" id="stBondChange">$0</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">Cash (Unchanged):</span>
+                  <span class="${textPrimary} font-medium" id="stCashValue">$0</span>
+                </div>
+                <div class="flex justify-between border-t ${borderColor} pt-2 mt-2">
+                  <span class="${textPrimary} font-semibold">Total Loss:</span>
+                  <span class="text-red-600 font-bold" id="stTotalLoss">-$0</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-6 p-4 rounded-lg ${borderColor} border">
+              <h3 class="font-semibold ${textPrimary} mb-3">Recovery Analysis</h3>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">Years to Recover (7% avg return):</span>
+                  <span class="${textPrimary} font-medium" id="stRecoveryYears">0 years</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="${textSecondary}">Portfolio after ${formInputs.stressTest.investmentHorizon} Years:</span>
+                  <span style="color: ${palette.primary}" class="font-medium" id="stFinalValue">$0</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-6">
+              <h3 class="font-semibold ${textPrimary} mb-3">Stress Scenario Impact</h3>
+              <canvas id="stressTestChart"></canvas>
+            </div>
+
+            <div>
+              <h3 class="font-semibold ${textPrimary} mb-3">Recovery Projection</h3>
+              <canvas id="stressTestDrawdownChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('stressTestForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    calculateStressTest();
+  });
+
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('stCustomDropdown');
+    if (dropdown && !e.target.closest('.relative') && !dropdown.classList.contains('hidden')) {
+      dropdown.classList.add('hidden');
+    }
+  });
+
+  restoreFormInputs('stressTest');
+
+  if (calculationResults.stressTest) {
+    displayStressTestResults();
+  } else {
+    setTimeout(() => calculateStressTest(), 0);
+  }
+}
+
+function calculateStressTest() {
+  saveFormInputs('stressTest');
+
+  const portfolioValue = parseFloat(document.getElementById('stPortfolioValue').value);
+  const stockAlloc = parseFloat(document.getElementById('stStockAllocation').value) / 100;
+  const bondAlloc = parseFloat(document.getElementById('stBondAllocation').value) / 100;
+  const cashAlloc = parseFloat(document.getElementById('stCashAllocation').value) / 100;
+  const horizon = parseFloat(document.getElementById('stInvestmentHorizon').value);
+  const scenario = document.getElementById('stStressScenario').value;
+
+  // Scenario definitions
+  const scenarios = {
+    mild: { stocks: -0.15, bonds: -0.05, name: 'Mild Recession' },
+    moderate: { stocks: -0.30, bonds: -0.10, name: 'Moderate Crisis' },
+    severe: { stocks: -0.50, bonds: -0.15, name: 'Severe Crash' },
+    '2008': { stocks: -0.57, bonds: 0.05, name: '2008 Financial Crisis' },
+    '2000': { stocks: -0.49, bonds: 0.20, name: '2000 Dot-Com Crash' },
+    stagflation: { stocks: -0.25, bonds: -0.20, name: 'Stagflation' }
+  };
+
+  const selectedScenario = scenarios[scenario];
+
+  // Calculate current allocations
+  const stockValue = portfolioValue * stockAlloc;
+  const bondValue = portfolioValue * bondAlloc;
+  const cashValue = portfolioValue * cashAlloc;
+
+  // Calculate stress impact
+  const stockLoss = stockValue * selectedScenario.stocks;
+  const bondChange = bondValue * selectedScenario.bonds;
+  const totalLoss = stockLoss + bondChange;
+
+  const stressedStockValue = stockValue + stockLoss;
+  const stressedBondValue = bondValue + bondChange;
+  const stressedPortfolio = stressedStockValue + stressedBondValue + cashValue;
+
+  const maxDrawdown = ((portfolioValue - stressedPortfolio) / portfolioValue) * 100;
+
+  // Calculate recovery time (assuming 7% annual return)
+  const avgReturn = 0.07;
+  const recoveryYears = Math.log(portfolioValue / stressedPortfolio) / Math.log(1 + avgReturn);
+
+  // Project recovery over time
+  const recoveryPath = [stressedPortfolio];
+  const labels = ['Crisis'];
+  let currentValue = stressedPortfolio;
+
+  for (let year = 1; year <= horizon; year++) {
+    currentValue = currentValue * (1 + avgReturn);
+    recoveryPath.push(currentValue);
+    labels.push(`Year ${year}`);
+  }
+
+  // Create comparison data (normal growth without crisis)
+  const normalPath = [portfolioValue];
+  let normalValue = portfolioValue;
+  for (let year = 1; year <= horizon; year++) {
+    normalValue = normalValue * (1 + avgReturn);
+    normalPath.push(normalValue);
+  }
+
+  calculationResults.stressTest = {
+    portfolioValue,
+    stockValue,
+    bondValue,
+    cashValue,
+    stockLoss,
+    bondChange,
+    totalLoss,
+    stressedPortfolio,
+    maxDrawdown,
+    recoveryYears,
+    recoveryPath,
+    normalPath,
+    labels,
+    scenarioName: selectedScenario.name,
+    finalValue: recoveryPath[recoveryPath.length - 1],
+    horizon
+  };
+
+  displayStressTestResults();
+}
+
+function displayStressTestResults() {
+  if (!calculationResults.stressTest) return;
+
+  const { portfolioValue, stockValue, bondValue, cashValue, stockLoss, bondChange, totalLoss, stressedPortfolio, maxDrawdown, recoveryYears, recoveryPath, normalPath, labels, scenarioName, finalValue, horizon } = calculationResults.stressTest;
+
+  const formatMoney = (val) => '$' + Math.abs(val).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  document.getElementById('stMaxDrawdown').textContent = '-' + maxDrawdown.toFixed(1) + '%';
+  document.getElementById('stBottomValue').textContent = formatMoney(stressedPortfolio);
+  document.getElementById('stInitialValue').textContent = formatMoney(portfolioValue);
+  document.getElementById('stStockLoss').textContent = '-' + formatMoney(stockLoss);
+  document.getElementById('stBondChange').textContent = (bondChange >= 0 ? '+' : '-') + formatMoney(bondChange);
+  document.getElementById('stCashValue').textContent = formatMoney(cashValue);
+  document.getElementById('stTotalLoss').textContent = '-' + formatMoney(Math.abs(totalLoss));
+  document.getElementById('stRecoveryYears').textContent = recoveryYears.toFixed(1) + ' years';
+  document.getElementById('stFinalValue').textContent = formatMoney(finalValue);
+
+  const statusDiv = document.getElementById('stStatusDiv');
+  const statusMessage = document.getElementById('stStatusMessage');
+
+  if (maxDrawdown < 15) {
+    statusDiv.className = 'p-4 rounded-lg bg-green-100 border border-green-300';
+    statusMessage.className = 'text-sm font-medium text-green-800';
+    statusMessage.textContent = `${scenarioName}: Your portfolio has moderate exposure. The conservative allocation limits downside.`;
+  } else if (maxDrawdown < 30) {
+    statusDiv.className = 'p-4 rounded-lg bg-yellow-100 border border-yellow-300';
+    statusMessage.className = 'text-sm font-medium text-yellow-800';
+    statusMessage.textContent = `${scenarioName}: Significant but manageable losses. Consider your risk tolerance and time horizon.`;
+  } else {
+    statusDiv.className = 'p-4 rounded-lg bg-red-100 border border-red-300';
+    statusMessage.className = 'text-sm font-medium text-red-800';
+    statusMessage.textContent = `${scenarioName}: Severe losses expected. Ensure you can withstand this drawdown without selling.`;
+  }
+
+  document.getElementById('stResults').classList.remove('hidden');
+
+  const settings = calculatorSettings.stressTest;
+  const theme = settings.theme;
+  const palette = colorPalettes[settings.colorPalette][theme];
+
+  if (stressTestChart) stressTestChart.destroy();
+  if (stressTestDrawdownChart) stressTestDrawdownChart.destroy();
+
+  const ctx = document.getElementById('stressTestChart').getContext('2d');
+  stressTestChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Stocks', 'Bonds', 'Cash', 'Total'],
+      datasets: [
+        {
+          label: 'Before Crisis',
+          data: [stockValue, bondValue, cashValue, portfolioValue],
+          backgroundColor: palette.primary
+        },
+        {
+          label: 'After Crisis',
+          data: [stockValue + stockLoss, bondValue + bondChange, cashValue, stressedPortfolio],
+          backgroundColor: 'rgba(239, 68, 68, 0.8)'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom' }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '$' + (value / 1000).toFixed(0) + 'K';
+            }
+          }
+        }
+      }
+    }
+  });
+
+  const drawdownCtx = document.getElementById('stressTestDrawdownChart').getContext('2d');
+  stressTestDrawdownChart = new Chart(drawdownCtx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Recovery Path',
+          data: recoveryPath,
+          borderColor: palette.primary,
+          backgroundColor: palette.secondary,
+          fill: true,
+          tension: 0.4,
+          borderWidth: 3
+        },
+        {
+          label: 'Without Crisis',
+          data: normalPath,
+          borderColor: 'rgba(16, 185, 129, 0.8)',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          fill: false,
+          tension: 0.4,
+          borderWidth: 2,
+          borderDash: [5, 5]
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom' },
+        annotation: {
+          annotations: {
+            breakeven: {
+              type: 'line',
+              yMin: portfolioValue,
+              yMax: portfolioValue,
+              borderColor: 'rgba(0, 0, 0, 0.3)',
+              borderWidth: 1,
+              borderDash: [3, 3],
+              label: {
+                display: true,
+                content: 'Break-even',
+                position: 'end'
+              }
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: function(value) {
+              return '$' + (value / 1000).toFixed(0) + 'K';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
 // Global navigation functions
 window.goHome = renderHome;
 window.showMortgageCalculator = renderMortgageCalculator;
 window.showLoanCalculator = renderLoanCalculator;
 window.showInvestmentCalculator = renderInvestmentCalculator;
 window.showRetirementCalculator = renderRetirementCalculator;
+window.showRetirementSuccessCalculator = renderRetirementSuccessCalculator;
+window.showCompensationCalculator = renderCompensationCalculator;
+window.showStressTestCalculator = renderStressTestCalculator;
 
 // Global customization functions
 window.toggleTheme = toggleTheme;
