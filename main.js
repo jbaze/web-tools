@@ -1,5 +1,3 @@
-import './style.css'
-
 const app = document.querySelector('#app');
 
 // Navigation state
@@ -20,6 +18,8 @@ let compensationBreakdownChart = null;
 let compensationComparisonChart = null;
 let stressTestChart = null;
 let stressTestDrawdownChart = null;
+let contributionImpactChart = null;
+let contributionComparisonChart = null;
 
 // Calculation results state
 const calculationResults = {
@@ -29,7 +29,8 @@ const calculationResults = {
   loan: null,
   retirementSuccess: null,
   compensation: null,
-  stressTest: null
+  stressTest: null,
+  contributionImpact: null
 };
 
 // Form input values state
@@ -90,6 +91,14 @@ const formInputs = {
     cashAllocation: 10,
     investmentHorizon: 10,
     stressScenario: 'moderate'
+  },
+  contributionImpact: {
+    initialAmount: 10000,
+    baselineContribution: 500,
+    increasedContribution: 750,
+    aggressiveContribution: 1000,
+    returnRate: 7,
+    timeHorizon: 30
   }
 };
 
@@ -129,6 +138,11 @@ const calculatorSettings = {
     theme: 'light',
     logo: 'trending',
     colorPalette: 'rose'
+  },
+  contributionImpact: {
+    theme: 'light',
+    logo: 'chart',
+    colorPalette: 'teal'
   }
 };
 
@@ -152,6 +166,10 @@ const colorPalettes = {
   purple: {
     light: { primary: 'rgb(124, 58, 237)', secondary: 'rgba(124, 58, 237, 0.1)', accent: 'rgb(139, 92, 246)' },
     dark: { primary: 'rgb(139, 92, 246)', secondary: 'rgba(139, 92, 246, 0.1)', accent: 'rgb(124, 58, 237)' }
+  },
+  teal: {
+    light: { primary: 'rgb(13, 148, 136)', secondary: 'rgba(13, 148, 136, 0.1)', accent: 'rgb(20, 184, 166)' },
+    dark: { primary: 'rgb(20, 184, 166)', secondary: 'rgba(20, 184, 166, 0.1)', accent: 'rgb(13, 148, 136)' }
   }
 };
 
@@ -216,6 +234,13 @@ function saveFormInputs(calculator) {
     formInputs.stressTest.cashAllocation = parseFloat(document.getElementById('stCashAllocation')?.value || formInputs.stressTest.cashAllocation);
     formInputs.stressTest.investmentHorizon = parseFloat(document.getElementById('stInvestmentHorizon')?.value || formInputs.stressTest.investmentHorizon);
     formInputs.stressTest.stressScenario = document.getElementById('stStressScenario')?.value || formInputs.stressTest.stressScenario;
+  } else if (calculator === 'contributionImpact') {
+    formInputs.contributionImpact.initialAmount = parseFloat(document.getElementById('initialAmount')?.value || formInputs.contributionImpact.initialAmount);
+    formInputs.contributionImpact.baselineContribution = parseFloat(document.getElementById('baselineContribution')?.value || formInputs.contributionImpact.baselineContribution);
+    formInputs.contributionImpact.increasedContribution = parseFloat(document.getElementById('increasedContribution')?.value || formInputs.contributionImpact.increasedContribution);
+    formInputs.contributionImpact.aggressiveContribution = parseFloat(document.getElementById('aggressiveContribution')?.value || formInputs.contributionImpact.aggressiveContribution);
+    formInputs.contributionImpact.returnRate = parseFloat(document.getElementById('returnRate')?.value || formInputs.contributionImpact.returnRate);
+    formInputs.contributionImpact.timeHorizon = parseFloat(document.getElementById('timeHorizon')?.value || formInputs.contributionImpact.timeHorizon);
   }
 }
 
@@ -270,6 +295,13 @@ function restoreFormInputs(calculator) {
     document.getElementById('stCashAllocation').value = formInputs.stressTest.cashAllocation;
     document.getElementById('stInvestmentHorizon').value = formInputs.stressTest.investmentHorizon;
     document.getElementById('stStressScenario').value = formInputs.stressTest.stressScenario;
+  } else if (calculator === 'contributionImpact') {
+    document.getElementById('initialAmount').value = formInputs.contributionImpact.initialAmount;
+    document.getElementById('baselineContribution').value = formInputs.contributionImpact.baselineContribution;
+    document.getElementById('increasedContribution').value = formInputs.contributionImpact.increasedContribution;
+    document.getElementById('aggressiveContribution').value = formInputs.contributionImpact.aggressiveContribution;
+    document.getElementById('returnRate').value = formInputs.contributionImpact.returnRate;
+    document.getElementById('timeHorizon').value = formInputs.contributionImpact.timeHorizon;
   }
 }
 
@@ -290,6 +322,8 @@ function toggleTheme(calculator) {
     renderCompensationCalculator();
   } else if (calculator === 'stressTest') {
     renderStressTestCalculator();
+  } else if (calculator === 'contributionImpact') {
+    renderContributionImpactCalculator();
   }
 }
 
@@ -310,6 +344,8 @@ function changeColorPalette(calculator, palette) {
     renderCompensationCalculator();
   } else if (calculator === 'stressTest') {
     renderStressTestCalculator();
+  } else if (calculator === 'contributionImpact') {
+    renderContributionImpactCalculator();
   }
 }
 
@@ -330,6 +366,8 @@ function changeLogo(calculator, logo) {
     renderCompensationCalculator();
   } else if (calculator === 'stressTest') {
     renderStressTestCalculator();
+  } else if (calculator === 'contributionImpact') {
+    renderContributionImpactCalculator();
   }
 }
 
@@ -434,6 +472,19 @@ function renderHome() {
               <h2 class="text-2xl font-bold text-gray-900 ml-4">Portfolio Stress Test</h2>
             </div>
             <p class="text-gray-600">Simulate how your portfolio would perform under various market stress scenarios.</p>
+          </div>
+
+          <!-- Contribution Impact Model Card -->
+          <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer p-6" onclick="window.showContributionImpactCalculator()">
+            <div class="flex items-center mb-4">
+              <div class="bg-teal-100 rounded-lg p-3">
+                <svg class="w-8 h-8 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <h2 class="text-2xl font-bold text-gray-900 ml-4">Contribution Impact</h2>
+            </div>
+            <p class="text-gray-600">Compare how different contribution amounts affect your long-term investment growth.</p>
           </div>
         </div>
       </div>
@@ -3279,6 +3330,399 @@ function displayStressTestResults() {
   });
 }
 
+// Contribution Impact Calculator
+function renderContributionImpactCalculator() {
+  const settings = calculatorSettings.contributionImpact;
+  const theme = settings.theme;
+  const palette = colorPalettes[settings.colorPalette][theme];
+  const logoPath = logos[settings.logo];
+
+  const bgClass = theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50';
+  const cardBg = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
+  const textPrimary = theme === 'dark' ? 'text-white' : 'text-gray-900';
+  const textSecondary = theme === 'dark' ? 'text-gray-300' : 'text-gray-600';
+  const borderColor = theme === 'dark' ? 'border-gray-700' : 'border-gray-200';
+  const inputBg = theme === 'dark' ? 'bg-gray-700 text-white border border-gray-600' : 'bg-white text-gray-900 border border-gray-300';
+
+  currentView = 'contributionImpact';
+
+  app.innerHTML = `
+    <div class="min-h-screen py-8 px-4 ${bgClass}">
+      <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="mb-6 flex justify-between items-center">
+          <button onclick="window.goHome()" class="flex items-center text-blue-600 hover:text-blue-800 transition-colors">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            <span class="${textPrimary}">Back</span>
+          </button>
+
+          <!-- Theme and customization controls -->
+          <div class="flex gap-3">
+            <button onclick="window.toggleTheme('contributionImpact')" class="${cardBg} p-2 rounded-lg ${borderColor} border transition-all hover:scale-105" title="Toggle Theme">
+              <svg class="w-5 h-5 ${textPrimary}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${theme === 'light' ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>' : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>'}
+              </svg>
+            </button>
+
+            <div class="relative">
+              <button onclick="document.getElementById('contributionCustomDropdown').classList.toggle('hidden')" class="${cardBg} px-4 py-2 rounded-lg ${borderColor} border ${textPrimary} hover:scale-105 transition-all">
+                Customize
+              </button>
+              <div id="contributionCustomDropdown" class="hidden absolute right-0 mt-2 w-64 ${cardBg} rounded-lg shadow-xl ${borderColor} border p-4 z-10">
+                <h3 class="${textPrimary} font-semibold mb-3">Color Palette</h3>
+                <div class="grid grid-cols-5 gap-2 mb-4">
+                  ${Object.keys(colorPalettes).map(p => `
+                    <button onclick="window.changeColorPalette('contributionImpact', '${p}')" class="w-10 h-10 rounded-lg border-2 ${p === settings.colorPalette ? 'border-blue-500' : 'border-transparent'}" style="background: ${colorPalettes[p][theme].primary}" title="${p}"></button>
+                  `).join('')}
+                </div>
+                <h3 class="${textPrimary} font-semibold mb-3">Logo</h3>
+                <div class="grid grid-cols-5 gap-2">
+                  ${Object.keys(logos).map(l => `
+                    <button onclick="window.changeLogo('contributionImpact', '${l}')" class="w-10 h-10 rounded-lg ${l === settings.logo ? 'bg-blue-100' : cardBg} ${borderColor} border hover:bg-blue-50 transition-colors">
+                      <svg class="w-6 h-6 mx-auto ${textPrimary}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        ${logos[l]}
+                      </svg>
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main content - 2 columns -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Left Column - Input Form -->
+          <div class="${cardBg} rounded-lg shadow-lg p-6 ${borderColor} border">
+            <div class="flex items-center mb-6">
+              <div class="p-3 rounded-lg" style="background: ${palette.secondary}">
+                <svg class="w-8 h-8" style="color: ${palette.primary}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  ${logoPath}
+                </svg>
+              </div>
+              <h1 class="text-2xl font-bold ${textPrimary} ml-4">Contribution Impact Model</h1>
+            </div>
+
+            <form id="contributionImpactForm" class="space-y-5">
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Initial Investment Amount</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-3 ${textSecondary}">$</span>
+                  <input type="number" id="initialAmount" class="w-full pl-8 pr-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="${formInputs.contributionImpact.initialAmount}">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Baseline Monthly Contribution</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-3 ${textSecondary}">$</span>
+                  <input type="number" id="baselineContribution" class="w-full pl-8 pr-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="${formInputs.contributionImpact.baselineContribution}">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Increased Monthly Contribution</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-3 ${textSecondary}">$</span>
+                  <input type="number" id="increasedContribution" class="w-full pl-8 pr-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="${formInputs.contributionImpact.increasedContribution}">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Aggressive Monthly Contribution</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-3 ${textSecondary}">$</span>
+                  <input type="number" id="aggressiveContribution" class="w-full pl-8 pr-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="${formInputs.contributionImpact.aggressiveContribution}">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Expected Annual Return (%)</label>
+                <input type="number" step="0.1" id="returnRate" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="${formInputs.contributionImpact.returnRate}">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium ${textSecondary} mb-2">Time Horizon (Years)</label>
+                <input type="number" id="timeHorizon" class="w-full px-4 py-3 ${inputBg} rounded-lg focus:ring-2 transition-all" value="${formInputs.contributionImpact.timeHorizon}">
+              </div>
+
+              <button type="button" onclick="calculateContributionImpact()" class="w-full py-3 rounded-lg text-white font-semibold transition-all hover:scale-105 shadow-lg" style="background: ${palette.primary}">
+                Calculate Impact
+              </button>
+            </form>
+          </div>
+
+          <!-- Right Column - Results -->
+          <div class="${cardBg} rounded-lg shadow-lg p-6 ${borderColor} border">
+            <h2 class="text-xl font-bold ${textPrimary} mb-4">Contribution Comparison</h2>
+            <div id="contributionImpactResults">
+              <p class="${textSecondary}">Enter your details and click "Calculate Impact" to see how different contribution levels affect your investment growth over time.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('contributionCustomDropdown');
+    if (dropdown && !e.target.closest('.relative') && !dropdown.classList.contains('hidden')) {
+      dropdown.classList.add('hidden');
+    }
+  });
+
+  restoreFormInputs('contributionImpact');
+
+  if (calculationResults.contributionImpact) {
+    displayContributionImpactResults();
+  } else {
+    setTimeout(() => calculateContributionImpact(), 0);
+  }
+}
+
+function calculateContributionImpact() {
+  saveFormInputs('contributionImpact');
+
+  const initialAmount = parseFloat(document.getElementById('initialAmount').value);
+  const baselineContribution = parseFloat(document.getElementById('baselineContribution').value);
+  const increasedContribution = parseFloat(document.getElementById('increasedContribution').value);
+  const aggressiveContribution = parseFloat(document.getElementById('aggressiveContribution').value);
+  const returnRate = parseFloat(document.getElementById('returnRate').value) / 100;
+  const timeHorizon = parseInt(document.getElementById('timeHorizon').value);
+
+  // Calculate growth for each scenario
+  const scenarios = [
+    { name: 'Baseline', contribution: baselineContribution, values: [] },
+    { name: 'Increased', contribution: increasedContribution, values: [] },
+    { name: 'Aggressive', contribution: aggressiveContribution, values: [] }
+  ];
+
+  for (let scenario of scenarios) {
+    let balance = initialAmount;
+    scenario.values.push(balance);
+
+    for (let year = 1; year <= timeHorizon; year++) {
+      // Monthly contributions with annual compounding
+      for (let month = 0; month < 12; month++) {
+        balance += scenario.contribution;
+        balance *= (1 + returnRate / 12);
+      }
+      scenario.values.push(balance);
+    }
+  }
+
+  // Calculate total contributions and earnings for each scenario
+  const results = scenarios.map(scenario => ({
+    name: scenario.name,
+    monthlyContribution: scenario.contribution,
+    finalBalance: scenario.values[scenario.values.length - 1],
+    totalContributions: initialAmount + (scenario.contribution * 12 * timeHorizon),
+    totalEarnings: scenario.values[scenario.values.length - 1] - (initialAmount + (scenario.contribution * 12 * timeHorizon))
+  }));
+
+  calculationResults.contributionImpact = {
+    scenarios,
+    results,
+    timeHorizon,
+    initialAmount,
+    returnRate
+  };
+
+  displayContributionImpactResults();
+}
+
+function displayContributionImpactResults() {
+  const data = calculationResults.contributionImpact;
+  if (!data) return;
+
+  const settings = calculatorSettings.contributionImpact;
+  const theme = settings.theme;
+  const palette = colorPalettes[settings.colorPalette][theme];
+  const textPrimary = theme === 'dark' ? 'text-white' : 'text-gray-900';
+  const textSecondary = theme === 'dark' ? 'text-gray-300' : 'text-gray-600';
+  const cardBg = theme === 'dark' ? 'bg-gray-800' : 'bg-white';
+  const borderColor = theme === 'dark' ? 'border-gray-700' : 'border-gray-200';
+
+  const resultsDiv = document.getElementById('contributionImpactResults');
+
+  // Calculate differences
+  const baselineResult = data.results[0];
+  const increasedResult = data.results[1];
+  const aggressiveResult = data.results[2];
+
+  const increasedGain = increasedResult.finalBalance - baselineResult.finalBalance;
+  const aggressiveGain = aggressiveResult.finalBalance - baselineResult.finalBalance;
+  const increasedPercentGain = ((increasedResult.finalBalance / baselineResult.finalBalance - 1) * 100).toFixed(1);
+  const aggressivePercentGain = ((aggressiveResult.finalBalance / baselineResult.finalBalance - 1) * 100).toFixed(1);
+
+  resultsDiv.innerHTML = `
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 gap-4 mb-6">
+      ${data.results.map((result, index) => `
+        <div class="p-4 rounded-lg ${borderColor} border">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="font-semibold ${textPrimary}">${result.name} Scenario</h3>
+            <span class="text-sm ${textSecondary}">$${result.monthlyContribution.toLocaleString()}/mo</span>
+          </div>
+          <div class="text-2xl font-bold mb-1" style="color: ${palette.primary}">
+            $${result.finalBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </div>
+          <div class="text-xs ${textSecondary}">
+            Contributions: $${result.totalContributions.toLocaleString(undefined, { maximumFractionDigits: 0 })} |
+            Earnings: $${result.totalEarnings.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- Comparison Insights -->
+    <div class="mb-6 p-4 rounded-lg" style="background: ${palette.secondary}">
+      <h3 class="font-semibold ${textPrimary} mb-3">Impact Analysis</h3>
+      <div class="space-y-2 text-sm ${textSecondary}">
+        <div class="flex justify-between">
+          <span>Increased vs Baseline:</span>
+          <span class="font-semibold" style="color: ${palette.primary}">+$${increasedGain.toLocaleString(undefined, { maximumFractionDigits: 0 })} (+${increasedPercentGain}%)</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Aggressive vs Baseline:</span>
+          <span class="font-semibold" style="color: ${palette.primary}">+$${aggressiveGain.toLocaleString(undefined, { maximumFractionDigits: 0 })} (+${aggressivePercentGain}%)</span>
+        </div>
+        <div class="flex justify-between pt-2 border-t ${borderColor}">
+          <span>Extra monthly (Increased):</span>
+          <span>$${(increasedResult.monthlyContribution - baselineResult.monthlyContribution).toLocaleString()}</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Extra monthly (Aggressive):</span>
+          <span>$${(aggressiveResult.monthlyContribution - baselineResult.monthlyContribution).toLocaleString()}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Growth Chart -->
+    <div class="mb-6">
+      <h3 class="font-semibold ${textPrimary} mb-3">Growth Over Time</h3>
+      <canvas id="contributionImpactChart" width="400" height="300"></canvas>
+    </div>
+
+    <!-- Breakdown Chart -->
+    <div>
+      <h3 class="font-semibold ${textPrimary} mb-3">Final Balance Comparison</h3>
+      <canvas id="contributionComparisonChart" width="400" height="250"></canvas>
+    </div>
+  `;
+
+  // Create charts
+  createContributionImpactCharts(data, palette);
+}
+
+function createContributionImpactCharts(data, palette) {
+  // Destroy existing charts
+  if (contributionImpactChart) contributionImpactChart.destroy();
+  if (contributionComparisonChart) contributionComparisonChart.destroy();
+
+  const labels = Array.from({ length: data.timeHorizon + 1 }, (_, i) => `Year ${i}`);
+
+  // Growth over time chart
+  const growthCtx = document.getElementById('contributionImpactChart').getContext('2d');
+  contributionImpactChart = new Chart(growthCtx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: data.scenarios.map((scenario, index) => ({
+        label: scenario.name,
+        data: scenario.values,
+        borderColor: index === 0 ? palette.primary : index === 1 ? palette.accent : 'rgb(16, 185, 129)',
+        backgroundColor: index === 0 ? palette.secondary : index === 1 ? 'rgba(20, 184, 166, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 3
+      }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return context.dataset.label + ': $' + context.parsed.y.toLocaleString(undefined, { maximumFractionDigits: 0 });
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '$' + (value / 1000).toFixed(0) + 'K';
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // Final balance comparison chart
+  const comparisonCtx = document.getElementById('contributionComparisonChart').getContext('2d');
+  contributionComparisonChart = new Chart(comparisonCtx, {
+    type: 'bar',
+    data: {
+      labels: data.results.map(r => r.name),
+      datasets: [
+        {
+          label: 'Total Contributions',
+          data: data.results.map(r => r.totalContributions),
+          backgroundColor: 'rgba(100, 116, 139, 0.6)',
+          borderColor: 'rgb(100, 116, 139)',
+          borderWidth: 2
+        },
+        {
+          label: 'Investment Earnings',
+          data: data.results.map(r => r.totalEarnings),
+          backgroundColor: palette.secondary,
+          borderColor: palette.primary,
+          borderWidth: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return context.dataset.label + ': $' + context.parsed.y.toLocaleString(undefined, { maximumFractionDigits: 0 });
+            }
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return '$' + (value / 1000).toFixed(0) + 'K';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
 // Global navigation functions
 window.goHome = renderHome;
 window.showMortgageCalculator = renderMortgageCalculator;
@@ -3288,6 +3732,10 @@ window.showRetirementCalculator = renderRetirementCalculator;
 window.showRetirementSuccessCalculator = renderRetirementSuccessCalculator;
 window.showCompensationCalculator = renderCompensationCalculator;
 window.showStressTestCalculator = renderStressTestCalculator;
+window.showContributionImpactCalculator = renderContributionImpactCalculator;
+
+// Global calculation functions
+window.calculateContributionImpact = calculateContributionImpact;
 
 // Global customization functions
 window.toggleTheme = toggleTheme;

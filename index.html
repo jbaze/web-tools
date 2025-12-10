@@ -2,17 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Financial Calculators</title>
+
+    <!-- remove or replace /vite.svg if you don't have it -->
+    <!-- <link rel="icon" type="image/svg+xml" href="/vite.svg" /> -->
+
+    <!-- Tailwind CDN (ok for dev/prototype) -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Your local stylesheet (correct way to include CSS) -->
+    <link rel="stylesheet" href="/style.css" />
+
+    <!-- Chart.js UMD build available as global Chart -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <meta property="og:image" content="https://bolt.new/static/og_default.png">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:image" content="https://bolt.new/static/og_default.png">
-</head>
+
+    <meta property="og:image" content="https://bolt.new/static/og_default.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://bolt.new/static/og_default.png" />
+  </head>
   <body class="bg-gray-50">
     <div id="app"></div>
+
+    <!-- Your JS module -->
     <script type="module" src="/main.js"></script>
   </body>
 </html>
